@@ -1,0 +1,18 @@
+spring:
+  thymeleaf:
+    cache: false
+
+  web:
+    resources:
+      chain:
+        cache: false
+      cache:
+        period: 0
+
+  r2dbc:
+    url: r2dbc:mysql://localhost:3306?serverZoneId=Asia/Shanghai
+    password: 860226
+    username: qiuli
+    name: test
+    pool:
+      enabled: true
