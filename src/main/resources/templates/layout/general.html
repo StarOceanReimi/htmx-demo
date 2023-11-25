@@ -10,13 +10,14 @@
     <link rel="stylesheet" th:href="@{/css/tailwind.css}">
     <link rel="stylesheet" th:href="@{/css/flowbite.min.css}">
     <script type="text/javascript" th:src="@{/js/flowbite.js}"></script>
+    <script type="text/javascript" th:src="@{/webjars/htmx.org/1.9.8/dist/htmx.min.js}"></script>
+    <script type="text/javascript" th:src="@{/js/util.js}"></script>
 
     <th:block th:replace="${links}"/>
     <th:block th:replace="${scripts}"/>
 </head>
 
 <body>
-
-
+    <th:block th:fragment="empty_frag"></th:block>
 </body>
 </html>

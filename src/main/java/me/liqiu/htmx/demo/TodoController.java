@@ -1,10 +1,14 @@
 package me.liqiu.htmx.demo;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import lombok.RequiredArgsConstructor;
 import lombok.With;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.r2dbc.repository.R2dbcRepository;
 import org.springframework.data.relational.core.mapping.Table;
 import org.springframework.stereotype.Controller;
@@ -25,54 +29,32 @@ public class TodoController {
 
     private final TodoRepository repository;
 
+    private final ObjectMapper objectMapper;
+
     @GetMapping({"", "/"})
     public Mono<String> index(Model model, @RequestParam(value = "filter-type", required = false) String type) {
-
+        final Sort idSort = Sort.by(Sort.Direction.DESC, "id");
         Flux<Todo> todosFlux = "unfinished".equals(type)
-            ? repository.findAll(Example.of(new Todo(null, null, false), ExampleMatcher.matching().withIgnoreNullValues()))
-            : repository.findAll();
+            ? repository.findAll(Example.of(new Todo(null, null, false), ExampleMatcher.matching().withIgnoreNullValues()), idSort)
+            : repository.findAll(idSort);
         return todosFlux.collectList().map(todos -> {
             model.addAttribute("items", todos);
             return "todo";
         });
     }
 
-    @PostMapping({"", "/"})
+    @PostMapping(value = "/save", headers = "hx-request")
     public Mono<String> save(ServerWebExchange exchange) {
-        return exchange.getFormData().mapNotNull(m -> m.getFirst("todo"))
-            .switchIfEmpty(Mono.error(new IllegalArgumentException("todo not exists!")))
-            .flatMap(todo -> repository
-                .save(new Todo(null, todo, false)))
-            .map(t -> "redirect:/todos");
-    }
-
-    @PostMapping("update")
-    public Mono<String> statusUpdate(ServerWebExchange exchange) {
         return exchange.getFormData().flatMap(m -> {
-            final String sid = m.getFirst("id");
-            final int id = Integer.parseInt(sid);
-            return repository.findById(id)
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("id not exists")))
-                .flatMap(t -> repository.save(t.withDone(!t.done())))
-                .map(t -> "redirect:/todos");
+            final String todo = m.getFirst("todo");
+            Preconditions.checkArgument(!Strings.isNullOrEmpty(todo), "Todo cannot be empty");
+            final boolean isEmpty = Boolean.parseBoolean(m.getFirst("type"));
+            return repository.save(new Todo(null, todo, false)).map(t -> {
+                if (isEmpty)
+                    return "fragments/biz/todo-item :: todoItemFirst(id=%s, task='%s', done=%s)".formatted(t.id(), t.task(), t.done());
+                return "fragments/biz/todo-item :: todoItemNew(id=%s, task='%s', done=%s)".formatted(t.id(), t.task(), t.done());
+            });
         });
-    }
-
-    @PostMapping("clear-all")
-    public Mono<String> clearAll() {
-        final Example<Todo> example = Example.of(new Todo(null, null, true), ExampleMatcher.matching().withIgnoreNullValues());
-        return repository.findAll(example).collectList()
-            .flatMap(repository::deleteAll)
-            .then(Mono.just("redirect:/todos"));
-    }
-
-    @PostMapping("delete-by-id")
-    public Mono<String> deleteById(ServerWebExchange exchange) {
-        return exchange.getFormData().flatMap(m -> {
-            final String id = m.getFirst("id");
-            return repository.deleteById(Integer.parseInt(id));
-        }).then(Mono.just("redirect:/todos"));
-
     }
 
 }

@@ -6,7 +6,9 @@
 </head>
 <body>
 
-<button class="inline-flex border border-red-800 rounded p-1 text-red-900" th:fragment="btn(name, icon)">
+<button class="inline-flex border border-red-800 rounded p-1 text-red-900"
+        th:attr="__${attr}__"
+        th:fragment="btn(name, icon, attr)">
     <th:block th:replace="${icon}"/>
     <span th:text="${name}"></span>
 </button>

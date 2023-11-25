@@ -2,24 +2,30 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <body>
 <th:block th:fragment="todoItem(id, task, done)">
-    <li class="flex">
-        <div class="list-item py-1 grow">
-            <form action="/todos/update" method="POST">
-                <input th:id="${id}" name="done" class="leading-loose" type="checkbox" onchange="submit()">
-                <label th:for="${id}" th:text="${task}" th:class="|leading-2 w-full ${done?'line-through':''}|"></label>
-                <input type="hidden" name="id" th:value="${id}">
-            </form>
-        </div>
-        <form action="/todos/delete-by-id" method="post">
-            <input type="hidden" name="id" th:value="${id}">
-            <button th:replace="~{fragments/control/main :: btn('Delete', ~{:: .delete})}">
-                <svg class="delete mr-1 w-6 h-6" fill="#771D1DFF" xmlns="http://www.w3.org/2000/svg"
-                     viewBox="0 0 24 24">
-                    <title>trash-can-outline</title>
-                    <path d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"/>
-                </svg>
-            </button>
-        </form>
+    <div class="list-item py-1 grow">
+        <input th:id="${id}" name="done" class="leading-loose" type="checkbox">
+        <label th:for="${id}" th:text="${task}" th:class="|leading-2 w-full ${done?'line-through':''}|"></label>
+    </div>
+    <button th:replace="~{fragments/control/main :: btn('Delete', ~{:: .delete}, 'a=1')}">
+        <svg class="delete mr-1 w-6 h-6" fill="#771D1DFF" xmlns="http://www.w3.org/2000/svg"
+             viewBox="0 0 24 24">
+            <title>trash-can-outline</title>
+            <path d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"/>
+        </svg>
+    </button>
+</th:block>
+
+<th:block th:fragment="todoItemFirst(id, task, done)">
+    <ul id="todos-container" class="py-2">
+        <li class="flex py-2">
+            <div th:replace="~{/fragments/biz/todo-item :: todoItem(${id}, ${task}, ${done})}"></div>
+        </li>
+    </ul>
+</th:block>
+
+<th:block th:fragment="todoItemNew(id, task, done)">
+    <li class="flex py-2">
+        <div th:replace="~{/fragments/biz/todo-item :: todoItem(${id}, ${task}, ${done})}"></div>
     </li>
 </th:block>
 
