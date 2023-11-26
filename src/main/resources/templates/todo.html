@@ -35,53 +35,73 @@
 </head>
 <body class="bg-gray-300" hx-ext="reset-on-success">
 
-<div class="mt-14 max-w-md mx-auto p-5 border-red-800 border bg-yellow-50">
+<div class="mt-14 max-w-md mx-auto p-5 border-red-800 border bg-yellow-50 relative">
 
     <div class="w-full pt-8 pb-4">
         <h1 class="font-bold text-3xl text-center text-red-900">Todo Sample Application</h1>
     </div>
 
-    <div class="todo-component w-full">
+    <div id="update-indicator" class="htmx-indicator text-center">
+        <span class="text-red-900 text-base">Info Updating ... </span>
+    </div>
+
+    <div class="todo-component w-full" th:attr="hx-include='input[name=todos-filter]'">
         <div class="header">
             <div class="search-filter my-4">
                 <span class="mr-2">Filter: </span>
                 <div class="mr-2 inline-block">
-                    <input id="filter-all" name="filter-type" type="radio" value="all">
+                    <input id="filter-all"
+                           th:attr="hx-post=@{/todos/refresh}
+                                  , hx-target='#todos-container'
+                                  , hx-indicator='#update-indicator'
+                                  , hx-swap='outerHTML'"
+                           name="filter-type" type="radio" value="all" >
                     <label for="filter-all" class="text-base">ALL</label>
                 </div>
                 <div class="inline-block">
-                    <input id="filter-unfinished" name="filter-type" type="radio" value="unfinished">
+                    <input id="filter-unfinished"
+                           th:attr="hx-post=@{/todos/refresh}
+                                  , hx-indicator='#update-indicator'
+                                  , hx-target='#todos-container'
+                                  , hx-swap='outerHTML'"
+                           name="filter-type" type="radio" value="unfinished">
                     <label for="filter-unfinished" class="text-base">UNFINISHED</label>
                 </div>
             </div>
             <div class="search-control">
-                <input type="hidden" name="type" th:value="${#lists.isEmpty(items)}">
-                <input th:replace="~{fragments/biz/search-input :: search_input_on_empty}" th:if="${#lists.isEmpty(items)}">
-                <input th:replace="~{fragments/biz/search-input :: search_input_on_present}" th:unless="${#lists.isEmpty(items)}">
+                <input name="todo"
+                       th:id="search-input"
+                       class="w-full"
+                       placeholder="Add some todos"
+                       type="text"
+                       th:attr="
+                       hx-post=@{/todos/save}
+                       , hx-indicator='#update-indicator'
+                       , hx-reset-on-success='true'
+                       , hx-include='previous input'
+                       , hx-trigger='keyup[keyCode==13]'
+                       , hx-swap='outerHTML'
+                       , hx-target='#todos-container'">
             </div>
         </div>
 
-        <div class="body mt-6">
-            <h2 id="todos-empty"
-                class="pl-2.5 bg-white border-gray-300 border text-center text-red-900 font-bold py-4 mb-2"
-                th:attr="hx-trigger='item-refresh from:body',hx-get=@{/todos},hx-swap='outerHTML'"
-                th:if="${#lists.isEmpty(items)}">Empty Todos</h2>
-
-            <ul id="todos-container" class="py-2" th:unless="${#lists.isEmpty(items)}">
-                <li class="flex py-2" th:each="item : ${items}">
-                    <div th:replace="~{/fragments/biz/todo-item :: todoItem(${item.id}, ${item.task}, ${item.done})}"></div>
-                </li>
-            </ul>
+        <div class="body mt-6" >
+            <div th:replace="~{fragments/biz/todos :: todo-container(${items}, ${filter})}"></div>
         </div>
 
         <div class="footer">
             <div class="flex mt-2">
-                <span class="grow leading-loose summary" th:text="|there is ${items.size()} items|"></span>
-                <button th:replace="~{fragments/control/main :: btn('Clear All Finished', ~{:: .clear_all}, 'a=1')}">
+                <span th:replace="~{fragments/biz/todos :: todo-count-msg(${finished}, ${total}, ${filter})}"></span>
+                <button th:attr="hx-delete=@{/todos/clear-finished}
+                               , hx-indicator='#update-indicator'
+                               , hx-swap='outerHTML'
+                               , hx-target='#todos-container'"
+                        class="inline-flex border border-red-800 rounded p-1 text-red-900">
                     <svg class="clear_all mr-1 w-6 h-6" fill="#771D1DFF" xmlns="http://www.w3.org/2000/svg"
                          viewBox="0 0 24 24"><title>close-box-multiple</title>
                         <path d="M4 20H18V22H4C2.9 22 2 21.11 2 20V6H4V20M20.22 2H7.78C6.8 2 6 2.8 6 3.78V16.22C6 17.2 6.8 18 7.78 18H20.22C21.2 18 22 17.2 22 16.22V3.78C22 2.8 21.2 2 20.22 2M19 13.6L17.6 15L14 11.4L10.4 15L9 13.6L12.6 10L9 6.4L10.4 5L14 8.6L17.6 5L19 6.4L15.4 10L19 13.6Z"/>
                     </svg>
+                    <span>Clear All Finished</span>
                 </button>
             </div>
         </div>

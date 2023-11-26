@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<th:block th:fragment="todo-container-oob(items, filter, finished, total)">
+    <div th:replace="~{:: todo-container(${items}, ${filter})}"></div>
+    <div th:replace="~{:: todo-count-msg(${finished}, ${total}, ${filter})}"></div>
+</th:block>
+
+<div th:id="todos-container"
+     th:attr="hx-post=@{/todos/refresh}, hx-trigger='refresh'"
+     th:fragment="todo-container(items, filter)">
+    <input type="hidden" name="todos-filter" th:value="${filter}">
+    <th:block th:if="${#lists.isEmpty(items)}">
+        <h2 th:id="todos-container-empty" class="pl-2.5 bg-white border-gray-300 border text-center text-red-900 font-bold py-4 mb-2">
+            Empty Todos
+        </h2>
+    </th:block>
+    <th:block th:unless="${#lists.isEmpty(items)}">
+        <ul th:id="todos-container-list" class="py-2">
+            <li class="flex py-2" th:each="item : ${items}">
+                <div th:replace="~{ :: todo-item(${item.id}, ${item.task}, ${item.done}, ${filter})}"></div>
+            </li>
+        </ul>
+    </th:block>
+</div>
+
+<th:block th:fragment="todo-count-msg(finished, total, filter)" >
+    <span th:id='todo-summary-mesage'
+          th:attr="hx-swap-oob='true'
+                 , hx-post=@{/todos/status}
+                 , hx-trigger='status-update from:body'"
+          th:text="|${finished} finished / ${total} total|"
+          class="grow leading-loose summary" ></span>
+</th:block>
+
+<th:block th:fragment="todo-item(id, task, done, filter)">
+    <div class="list-item py-1 grow">
+        <input th:id="|item-${id}|"
+               th:attr="hx-put=@{/todos/__${id}__/complete}
+                      , hx-indicator='#update-indicator'
+                      , hx-trigger='change'
+                      , hx-target='closest li'
+                      , hx-swap=${filter == 'unfinished' ? 'delete' : 'innerHTML'}"
+               th:checked="${done}"
+               name="done" class="leading-loose" type="checkbox">
+        <label th:for="|item-${id}|" th:text="${task}" th:class="|leading-2 w-full __${done?'line-through':''}__|"></label>
+    </div>
+    <button class="inline-flex border border-red-800 rounded p-1 text-red-900"
+            th:attr="hx-delete=@{/todos/__${id}__}
+                   , hx-indicator='#update-indicator'
+                   , hx-swap='outerHTML'
+                   , hx-target='#todos-container'">
+        <svg class="delete mr-1 w-6 h-6" fill="#771D1DFF" xmlns="http://www.w3.org/2000/svg"
+             viewBox="0 0 24 24">
+            <title>trash-can-outline</title>
+            <path d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"/>
+        </svg>
+        <span th:text="Delete"></span>
+    </button>
+</th:block>
+
+</body>
+</html>

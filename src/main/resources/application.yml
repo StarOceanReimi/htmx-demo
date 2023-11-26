@@ -16,3 +16,17 @@ spring:
     name: test
     pool:
       enabled: true
+      min-idle: 5
+      max-size: 10
+      initial-size: 5
+
+logging:
+  level:
+    root: info
+    web: debug
+    io.r2dbc: debug
+    io.asyncer.r2dbc.mysql.QUERY: debug
+
+server:
+  compression:
+    enabled: true
