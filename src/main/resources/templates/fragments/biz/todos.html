@@ -2,9 +2,9 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<th:block th:fragment="todo-container-oob(items, filter, finished, total)">
+<th:block th:fragment="todo-container-oob(items, filter, unfinished, total)">
     <div th:replace="~{:: todo-container(${items}, ${filter})}"></div>
-    <div th:replace="~{:: todo-count-msg(${finished}, ${total}, ${filter})}"></div>
+    <div th:replace="~{:: todo-count-msg(${unfinished}, ${total}, ${filter})}"></div>
 </th:block>
 
 <div th:id="todos-container"
@@ -25,12 +25,23 @@
     </th:block>
 </div>
 
-<th:block th:fragment="todo-count-msg(finished, total, filter)" >
+<th:block th:fragment="todo-count-msg-oob(unfinished, total, filter)">
+    <span th:replace="~{::todo-count-msg(${unfinished}, ${total}, ${filter})}"></span>
+    <h2 th:id="todos-container-list"
+        th:attr="hx-swap-oob='true'"
+        class="pl-2.5 bg-white border-gray-300 border text-center text-red-900 font-bold py-4 mb-2">
+        Empty Todos
+    </h2>
+</th:block>
+
+<th:block th:fragment="todo-count-msg(unfinished, total, filter)" >
     <span th:id='todo-summary-mesage'
+          th:with="script='js:{empty: [document.querySelector(\'#todos-container-list\')].map(x => x && x.children.length)[0] === 0}'"
           th:attr="hx-swap-oob='true'
                  , hx-post=@{/todos/status}
+                 , hx-vals=${filter == 'unfinished' ? script : ''}
                  , hx-trigger='status-update from:body'"
-          th:text="|${finished} finished / ${total} total|"
+          th:text="|${unfinished} unfinished / ${total} total|"
           class="grow leading-loose summary" ></span>
 </th:block>
 

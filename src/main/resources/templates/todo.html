@@ -79,7 +79,7 @@
                        , hx-indicator='#update-indicator'
                        , hx-reset-on-success='true'
                        , hx-include='previous input'
-                       , hx-trigger='keyup[keyCode==13]'
+                       , hx-trigger='keyup[keyCode==13] changed'
                        , hx-swap='outerHTML'
                        , hx-target='#todos-container'">
             </div>
@@ -91,7 +91,7 @@
 
         <div class="footer">
             <div class="flex mt-2">
-                <span th:replace="~{fragments/biz/todos :: todo-count-msg(${finished}, ${total}, ${filter})}"></span>
+                <span th:replace="~{fragments/biz/todos :: todo-count-msg(${unfinished}, ${total}, ${filter})}"></span>
                 <button th:attr="hx-delete=@{/todos/clear-finished}
                                , hx-indicator='#update-indicator'
                                , hx-swap='outerHTML'

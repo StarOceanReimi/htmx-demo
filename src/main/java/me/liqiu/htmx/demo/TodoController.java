@@ -2,21 +2,14 @@ package me.liqiu.htmx.demo;
 
 import lombok.RequiredArgsConstructor;
 import lombok.With;
-import org.reactivestreams.Publisher;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.r2dbc.repository.R2dbcRepository;
 import org.springframework.data.relational.core.mapping.Table;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Repository;
 import org.springframework.ui.Model;
@@ -31,7 +24,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import static java.util.Optional.ofNullable;
 
@@ -49,7 +41,7 @@ public class TodoController {
             final int total = todos.size();
             model.addAttribute("items", todos);
             model.addAttribute("filter", ofNullable(type).orElse("all"));
-            model.addAttribute("finished", finished);
+            model.addAttribute("unfinished", total - finished);
             model.addAttribute("total", total);
             return "todo";
         });
@@ -69,7 +61,7 @@ public class TodoController {
         });
     }
 
-    @PutMapping("/{id}/complete")
+    @PutMapping(value = "/{id}/complete", headers = "hx-request")
     public Mono<Void> completeItem(@PathVariable Integer id, ServerWebExchange exchange) {
         final Mono<String> todoType = Mono.justOrEmpty(exchange.getRequest().getQueryParams().getFirst("filter-type"))
             .switchIfEmpty(exchange.getFormData().mapNotNull(
@@ -80,7 +72,7 @@ public class TodoController {
             .switchIfEmpty(Mono.error(new IllegalArgumentException("id not exists")))
             .flatMap(todo -> repository.save(todo.withDone(!todo.done())))
             .flatMap(todo -> {
-                exchange.getResponse().getHeaders().set("HX-Trigger", "status-update");
+                exchange.getResponse().getHeaders().set("HX-Trigger-After-Swap", "status-update");
                 if (isUnfinishedType(filter)) return Mono.empty();
                 return renderFragment("fragments/biz/todos :: todo-item",
                     Map.of("id", todo.id(), "task", todo.task(), "done", todo.done(), "filter", filter), exchange);
@@ -100,15 +92,30 @@ public class TodoController {
             .then(renderTodosState(exchange));
     }
 
-    @PostMapping("/status")
+    @PostMapping(value = "/status", headers = "hx-request")
     public Mono<Void> todoStatusQuery(ServerWebExchange exchange) {
-        return obtainFilterType(exchange)
-            .flatMap(type -> todoState(type).collectList())
-            .flatMap(todos -> {
-                int finished = (int) todos.stream().filter(Todo::done).count();
-                int total = todos.size();
-                return renderFragment("/fragments/biz/todos :: todo-count-msg", Map.of("finished", finished, "total", total), exchange);
-            });
+        final Mono<MultiValueMap<String, String>> formData = exchange.getFormData().share();
+        return obtainFilterType(exchange, formData)
+            .flatMap(type -> todoState(type).collectList().flatMap(todos ->
+                formData.flatMap(data -> {
+                    int finished = (int) todos.stream().filter(Todo::done).count();
+                    int total = todos.size();
+                    final boolean empty = Boolean.parseBoolean(data.getFirst("empty"));
+                    if (!empty) {
+                        return renderFragment(
+                            "/fragments/biz/todos :: todo-count-msg",
+                            Map.of("unfinished", total - finished, "total", total, "filter", type),
+                            exchange
+                        );
+                    } else {
+                        return renderFragment(
+                            "/fragments/biz/todos :: todo-count-msg-oob",
+                            Map.of("unfinished", total - finished, "total", total, "filter", type),
+                            exchange
+                        );
+                    }
+                })
+            ));
     }
 
     private boolean isUnfinishedType(String type) {
@@ -130,16 +137,16 @@ public class TodoController {
             .flatMap(v -> v.render(model, MediaType.TEXT_HTML, exchange));
     }
 
-    private Mono<String> obtainFilterType(ServerWebExchange exchange) {
+    private Mono<String> obtainFilterType(ServerWebExchange exchange, Mono<MultiValueMap<String, String>> formData) {
         return Mono.justOrEmpty(exchange.getRequest().getQueryParams().getFirst("filter-type"))
-            .switchIfEmpty(exchange.getFormData().mapNotNull(
+            .switchIfEmpty(formData.mapNotNull(
                 m -> Optional.ofNullable(m.getFirst("filter-type")).orElse(m.getFirst("todos-filter")))
             )
             .switchIfEmpty(Mono.just("all"));
     }
 
     private Mono<Void> renderTodosState(ServerWebExchange exchange) {
-        return obtainFilterType(exchange).flatMap(type -> todoState(type).collectList()
+        return obtainFilterType(exchange, exchange.getFormData()).flatMap(type -> todoState(type).collectList()
             .flatMap(todos -> renderFragment(
                 "fragments/biz/todos :: todo-container-oob",
                 toTodosModel(todos, type),
@@ -154,7 +161,7 @@ public class TodoController {
         return Map.of(
             "items", todos,
             "filter", type,
-            "finished", finished,
+            "unfinished", total - finished,
             "total", total
         );
     }
