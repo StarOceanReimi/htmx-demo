@@ -10,9 +10,9 @@ spring:
         period: 0
 
   r2dbc:
-    url: r2dbc:mysql://localhost:3306?serverZoneId=Asia/Shanghai
-    password: 860226
-    username: qiuli
+    url: r2dbc:mysql://${mysql-host}:3306?serverZoneId=Asia/Shanghai
+    password: ${mysql-pwd}
+    username: ${mysql-user}
     name: test
     pool:
       enabled: true
